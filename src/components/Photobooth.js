@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 
 const frameOptions = [
@@ -16,19 +16,18 @@ const stickerOptions = [
 const videoConstraints = { width: 953, height: 599, facingMode: "user" };
 const SLOT_WIDTH = 953;
 const SLOT_HEIGHT = 599;
+const slots = [
+    { x: 123, y: 78 },
+    { x: 123, y: 697 },
+    { x: 123, y: 1286 },
+    { x: 123, y: 1885 }
+];
 
 
 export default function PhotoBooth() {
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
     const frameImgRef = useRef(null);
-
-    const slots = [
-        { x: 123, y: 78 },
-        { x: 123, y: 697 },
-        { x: 123, y: 1286 },
-        { x: 123, y: 1885 }
-    ];
 
     const [selectedFrame, setSelectedFrame] = useState(null);
     const [mode, setMode] = useState("photo");
@@ -47,19 +46,7 @@ export default function PhotoBooth() {
 
     // useEffects
 
-    // frames
-    useEffect(() => {
-        if (!selectedFrame) return;
-        const img = new Image();
-        img.src = selectedFrame;
-
-        img.onload = () => {
-            frameImgRef.current = img;
-            drawCanvas();
-        }
-    }, [selectedFrame]);
-
-    const drawCanvas = () => {
+    const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || !frameImgRef.current) return;
 
@@ -96,12 +83,24 @@ export default function PhotoBooth() {
                 ctx.strokeRect(s.x, s.y, 150, 150);
             }
         });
-    };
+    }, [photos, stickers, selectedSticker]);
 
-    useEffect(drawCanvas, [photos, stickers, selectedSticker, photoCount]);
+    useEffect(drawCanvas, [drawCanvas]);
+
+    // frames
+    useEffect(() => {
+        if (!selectedFrame) return;
+        const img = new Image();
+        img.src = selectedFrame;
+
+        img.onload = () => {
+            frameImgRef.current = img;
+            drawCanvas();
+        }
+    }, [selectedFrame, drawCanvas]);
 
     const handleBack = () => {
-        if (mode == "decorate") {
+        if (mode === "decorate") {
             setMode("photo");
             setCanTakePhoto(false);
             setStickers([]);
@@ -288,17 +287,17 @@ export default function PhotoBooth() {
         const handleKeyDown = e => {
             if (
                 (e.key === "Delete" || e.key === "Backspace") &&
-                selectedSticker != null &&
+                selectedSticker !== null &&
                 mode === "decorate"
             ){
-                setStickers(s => s.filter((_,i) => i != selectedSticker));
+                setStickers(s => s.filter((_,i) => i !== selectedSticker));
                 setSelectedSticker(null);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedSticker,mode]);
+    }, [selectedSticker, mode]);
 
     //download
 
@@ -521,7 +520,6 @@ const buttonStyle = {
     background: "white"
 };
 
-const row = { display: "flex", gap: 40, alignItems: "flex-start" };
 const frameThumb = {
     width: 180,
     cursor: "pointer",
